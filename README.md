@@ -1,6 +1,6 @@
 <div align='center'>
 
-<h1>Download all YouTube Shorts from a channel in a breeze! This script allows you to effortlessly download all shorts from a specified YouTube channel using Python 3.10.</h1>
+<h1>Download all YouTube Shorts from a channel in a breeze! This script allows you to effortlessly download all shorts from a specified YouTube channel using Python 3.10.0 and above</h1>
 <h4> <span> · </span> <a href="https://github.com/Sewer2K/YouTube Shorts Bulk Downloader/blob/master/README.md"> Documentation </a> <span> · </span> <a href="https://github.com/Sewer2K/YouTube Shorts Bulk Downloader/issues"> Report Bug </a> <span> · </span> <a href="https://github.com/Sewer2K/YouTube Shorts Bulk Downloader/issues"> Request Feature </a> </h4>
 
 
