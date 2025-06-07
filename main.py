@@ -1,34 +1,14 @@
-import tkinter as tk
-from tkinter import ttk, filedialog
-from threading import Thread
-import os
 import yt_dlp
-import subprocess
+import os
 
-def get_short_links(channel_url, progress_var, progress_label_var):
+
+def get_short_links(channel_url):
+    """Extract Shorts video links from a YouTube channel."""
     ydl_opts = {
         'quiet': True,
         'extract_flat': True,
-        'playlist_end': 100,
+        'playlist_end': 100,  # Fetch up to 100 videos
     }
-
-
-    if '/@' in channel_url:
-
-        channel_username = channel_url.split('/@')[1].split('/')[0]
-        
-        channel_url = f'https://www.youtube.com/@{channel_username}/shorts'
-    else:
-
-        channel_url = channel_url.split('/about')[0]  
-        channel_url = channel_url.split('/community')[0]  
-        channel_url = channel_url.split('/playlist')[0]  
-        channel_url = channel_url.split('/playlists')[0]  
-        channel_url = channel_url.split('/streams')[0]  
-        channel_url = channel_url.split('/featured')[0]  
-        channel_url = channel_url.split('/videos')[0]  
-
-        channel_url += '/shorts'
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         result = ydl.extract_info(channel_url, download=False)
@@ -37,80 +17,66 @@ def get_short_links(channel_url, progress_var, progress_label_var):
             short_links = [f'https://www.youtube.com/shorts/{video_id}' for video_id in video_ids]
             return short_links
         else:
-            print("No videos found on the channel.")
+            print("No Shorts videos found.")
             return []
 
-def download_videos_from_links(links, output_path, progress_var, progress_label_var):
+
+def download_videos_from_links(links, output_path, cookies_path):
+    """Download videos from the list of links."""
     total_links = len(links)
+
+    print(f"Using cookies from: {cookies_path}")
     for index, link in enumerate(links, start=1):
         link = link.strip()
         try:
-            subprocess.run(['yt-dlp', '--quiet', '--output', os.path.join(output_path, '%(title)s.%(ext)s'), link], check=True)
-            progress_label_var.set(f"Downloading video {index}/{total_links}: {link} - Downloaded successfully")
-        except subprocess.CalledProcessError as e:
+            ydl_opts = {
+                'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
+                'format': 'best',
+                'noplaylist': True,
+                'quiet': False,
+                'ignoreerrors': True,
+                'cookiefile': cookies_path,  # Load cookies from the file
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
+                'headers': {
+                    'Accept-Language': 'en-US,en;q=0.9',
+                },
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([link])
+            print(f"Downloaded video {index}/{total_links}: {link}")
+        except Exception as e:
             print(f"Error downloading {link}: {e}")
-            progress_label_var.set(f"Downloading video {index}/{total_links}: {link} - Failed to download: {e}")
         finally:
-            progress_var.set(int((index / total_links) * 100))
+            progress = int((index / total_links) * 100)
+            print(f"Progress: {progress}%")
 
-def browse_folder():
-    folder_selected = filedialog.askdirectory()
-    if folder_selected:
-        folder_var.set(folder_selected)
 
-def on_start_button_click(folder_var, channel_entry, progress_var, progress_label_var):
-    output_directory = folder_var.get()
-    os.makedirs(output_directory, exist_ok=True)
+def main():
+    """Main function for command-line execution."""
+    # Hardcoded channel URL
+    channel_url = "https://www.youtube.com/@DriftNinjaRC"
 
-    channel_url = channel_entry.get()
-    channel_name = channel_url.split('/')[-2]
+    # Path to cookies.txt
+    cookies_path = "cookies.txt"  # Ensure this file exists
 
-    short_links = get_short_links(channel_url, progress_var, progress_label_var)
+    # Default output directory
+    output_path = "downloaded_videos"
+
+    # Create the output directory if it doesn't exist
+    os.makedirs(output_path, exist_ok=True)
+
+    # Extract Shorts video links
+    print(f"Fetching Shorts video links from {channel_url}...")
+    short_links = get_short_links(channel_url)
     if not short_links:
+        print("No Shorts videos found.")
         return
 
-    Thread(target=download_videos_from_links, args=(short_links, output_directory, progress_var, progress_label_var)).start()
+    # Download the videos
+    print(f"Found {len(short_links)} Shorts videos. Starting download...")
+    download_videos_from_links(short_links, output_path, cookies_path)
+    print(f"Download process completed! Videos saved in: {os.path.abspath(output_path)}")
 
 
-root = tk.Tk()
-root.title(" Shorts Bulk DL By Sewer")
-
-style = ttk.Style()
-style.theme_use("clam")
-style.configure("TLabel", background="#2E2E2E", foreground="#FFFFFF")
-style.configure("TButton", background="#555555", foreground="#FFFFFF")
-style.configure("TEntry", fieldbackground="#555555", foreground="#FFFFFF")
-style.configure("Horizontal.TProgressbar", troughcolor="#555555", bordercolor="#555555", background="#009688")
-style.configure("TFrame", background="#2E2E2E")
-
-main_frame = ttk.Frame(root, padding="10")
-main_frame.grid(column=0, row=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-
-folder_label = ttk.Label(main_frame, text="Select the folder to save videos:")
-folder_label.grid(column=0, row=0, sticky=tk.W, pady=10)
-
-browse_button = ttk.Button(main_frame, text="Browse", command=browse_folder)
-browse_button.grid(column=1, row=0, sticky=tk.W, pady=10)
-
-folder_var = tk.StringVar()
-folder_entry = ttk.Entry(main_frame, textvariable=folder_var, state="readonly", width=50)
-folder_entry.grid(column=2, row=0, sticky=(tk.W, tk.E), pady=10)
-
-channel_label = ttk.Label(main_frame, text="Enter the YouTube channel URL:")
-channel_label.grid(column=0, row=1, sticky=tk.W, pady=10)
-
-channel_entry = ttk.Entry(main_frame, width=50)
-channel_entry.grid(column=1, row=1, columnspan=2, sticky=(tk.W, tk.E), pady=10)
-
-start_button = ttk.Button(main_frame, text="Start Download", command=lambda: on_start_button_click(folder_var, channel_entry, progress_var, progress_label_var))
-start_button.grid(column=0, row=2, columnspan=3, pady=10)
-
-progress_var = tk.IntVar()
-progress_bar = ttk.Progressbar(main_frame, orient="horizontal", mode="determinate", variable=progress_var, style="Horizontal.TProgressbar")
-progress_bar.grid(column=0, row=3, columnspan=3, pady=10, sticky=(tk.W, tk.E))
-
-progress_label_var = tk.StringVar()
-progress_label = ttk.Label(main_frame, textvariable=progress_label_var)
-progress_label.grid(column=0, row=4, columnspan=3, pady=5, sticky=(tk.W, tk.E))
-
-root.mainloop()
+if __name__ == "__main__":
+    main()
