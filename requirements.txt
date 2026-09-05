@@ -1,3 +1,4 @@
-tk
-ttkthemes
-yt-dlp
+PySide6>=6.6.0
+yt-dlp>=2024.8.6
+requests>=2.31.0
+pyinstaller>=6.3.0
